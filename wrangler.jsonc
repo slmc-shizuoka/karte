@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "karte",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-09-28",
+  "workers_dev": true,
+  "keep_vars": true
+}

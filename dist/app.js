@@ -51,7 +51,13 @@ async function sheetRequest(action, payload = {}) {
         cache:"no-store",
         signal:controller.signal
       });
-      const message = await response.json();
+      const responseText = await response.text();
+      let message;
+      try {
+        message = JSON.parse(responseText);
+      } catch {
+        throw new Error(`同期先が応答していません（HTTP ${response.status}）。公開設定を確認してください。`);
+      }
       if (!response.ok || !message.ok) {
         const error = new Error(message.error || "スプレッドシートの処理に失敗しました。");
         if (response.status >= 500) error.name = "NetworkError";
