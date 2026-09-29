@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<title>カルテ印刷確認</title>
+<link rel="stylesheet" href="../dist/styles.css">
+<link rel="stylesheet" href="../dist/card.css">
+<style>body{margin:0;background:#e9edf3}main{padding:20px}.card-preview-shell{padding:0;border:0}.karte-pages{gap:0}</style>
+<main><section id="cardView"><div class="card-workspace"><div class="card-preview-shell"><div id="cardPreview"></div></div></div></section></main>
+<script type="module">
+  import { cardMarkup } from "../dist/card.js";
+  const params = new URLSearchParams(location.search);
+  document.querySelector("#cardPreview").innerHTML = cardMarkup(
+    { memberId:"12345671", status:params.get("status") || "AO", shelf:"引き出し 1-2" },
+    { storeName:"SLみなとみらいBASE（1080）", kanaName:"ミホン タロウ", joinDate:"2018/04/01", planName:"サンプルプラン", sfStaff:"見本 花子", dxStaff:"", addressCheck:true }
+  );
+</script>
+</html>

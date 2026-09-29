@@ -94,11 +94,21 @@
                 <label for="cardMemberInput">会員番号<input id="cardMemberInput" inputmode="numeric" autocomplete="off" placeholder="会員番号を入力" required></label>
                 <button class="primary-button full" type="submit">カルテを作成</button>
               </form>
+              <button id="cardAddMemberButton" class="text-button" type="button">＋ 新規会員を登録してカルテ作成</button>
               <p id="cardReadyNote" class="card-ready-note" hidden></p>
             </section>
             <section id="cardDetailsPanel" class="data-card" hidden>
               <h3>印刷する内容</h3>
               <p>会員データにない項目は印刷時に入力できます。入力内容はシートへ保存されません。郵便番号・電話番号はカルテに載せません。</p>
+              <label for="cardStatus">カルテの区分・色<select id="cardStatus" required>
+                <option value="">区分を選択</option>
+                <option value="AO">① AO（緑）</option>
+                <option value="DX">② DX（青）</option>
+                <option value="Premium">⑤ Premium（紫）</option>
+                <option value="年払い">⑯ 年払い（橙）</option>
+                <option value="その他月額">⑲ その他月額（灰）</option>
+              </select></label>
+              <p class="card-status-help">ここで選ぶ区分はカルテの書式だけに反映します。会員データのステータスは変更しません。</p>
               <label for="cardStore">BASE（店舗）<input id="cardStore" placeholder="例：SL富士BASE"></label>
               <label for="cardKana">カナ名<input id="cardKana" placeholder="カナ名を入力"></label>
               <div class="card-field-pair"><label for="cardJoined">入会日<input id="cardJoined" type="date"></label><label for="cardPlan">プラン名<input id="cardPlan" placeholder="プラン名"></label></div>

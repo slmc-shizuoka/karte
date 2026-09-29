@@ -1,4 +1,4 @@
-import { cardMarkup, normalizeWideArea } from "./card.js";
+import { cardMarkup, cardTypeForStatus, normalizeWideArea, shouldPrepareCardAfterMemberSave } from "./card.js";
 
 const APP_PASSWORD = "1130";
 const SHEET_API_URL = "/api/sheet";
@@ -210,8 +210,9 @@ function bindEvents() {
   });
   $("#cardDetailsPanel").addEventListener("input", renderCardPreview);
   $("#cardDetailsPanel").addEventListener("change", renderCardPreview);
+  $("#cardAddMemberButton").addEventListener("click", () => openMemberDialog());
   $("#cardPrintButton").addEventListener("click", () => {
-    if (!cardMemberId) return;
+    if (!cardMemberId || !$("#cardStatus").value) return;
     window.print();
   });
   $("#manageSearch").addEventListener("input", () => { managePage = 1; renderMemberTable(); });
@@ -276,6 +277,8 @@ function prepareCard(rawMemberId, message = "カルテを作成しました。")
   }
   cardMemberId = String(member.memberId);
   $("#cardMemberInput").value = cardMemberId;
+  const category = cardTypeForStatus(member.status).label;
+  $("#cardStatus").value = [...$("#cardStatus").options].some(option => option.value === category) ? category : "";
   $("#cardDetailsPanel").hidden = false;
   $("#cardReadyNote").hidden = false;
   $("#cardReadyNote").textContent = `${message} 会員番号 ${cardMemberId} ／ 区分 ${member.status || "未設定"}`;
@@ -294,6 +297,13 @@ function renderCardPreview() {
     $("#cardPreview").innerHTML = "<div><strong>会員番号を入力してください</strong><span>作成したカルテの表面と裏面をここで確認できます。</span></div>";
     return;
   }
+  const selectedStatus = $("#cardStatus").value;
+  $("#cardPrintButton").disabled = !selectedStatus;
+  if (!selectedStatus) {
+    $("#cardPreview").classList.add("card-empty");
+    $("#cardPreview").innerHTML = "<div><strong>カルテの区分を選択してください</strong><span>区分に合わせた色の見本を表示します。</span></div>";
+    return;
+  }
   const details = {
     storeName:$("#cardStore").value.trim(),
     kanaName:$("#cardKana").value.trim(),
@@ -304,7 +314,7 @@ function renderCardPreview() {
     addressCheck:$("#cardAddressCheck").checked
   };
   $("#cardPreview").classList.remove("card-empty");
-  $("#cardPreview").innerHTML = cardMarkup({ ...member, shelf:currentShelf(member) }, details);
+  $("#cardPreview").innerHTML = cardMarkup({ ...member, status:selectedStatus, shelf:currentShelf(member) }, details);
 }
 function setSearchMode(mode) {
   searchMode = mode;
@@ -638,7 +648,7 @@ async function saveMember(event) {
     delete overrides[id];
     persistMembers();
     $("#memberDialog").close(); refreshAll(); toast(original ? "会員データを更新しました。" : "会員データを追加しました。");
-    if (!original || previousMember?.status !== status) {
+    if (shouldPrepareCardAfterMemberSave(previousMember, record)) {
       prepareCard(id, original ? "ステータス変更に合わせて新しいカルテを作成しました。" : "会員追加に合わせてカルテを作成しました。");
     }
   } catch (error) {

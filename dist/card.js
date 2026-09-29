@@ -18,15 +18,19 @@ export function cardTypeForStatus(status) {
   return selected ? { ...selected, status:text } : { code:"—", label:"その他", color:"#697586", status:text };
 }
 
+export function shouldPrepareCardAfterMemberSave(previousMember, nextMember) {
+  return !previousMember || previousMember.status !== nextMember.status;
+}
+
 function blankRows(count, columns) {
-  return Array.from({ length:count }, () => `<tr>${Array.from({ length:columns.length }, () => "<td>&nbsp;</td>").join("")}</tr>`).join("");
+  return Array.from({ length:count }, () => `<tr>${Array.from({ length:columns }, () => "<td>&nbsp;</td>").join("")}</tr>`).join("");
 }
 
 function yearTable(number) {
   return `<section class="karte-year">
     <div class="karte-year-heading"><strong>${number}年目</strong><span>西暦　＿＿＿＿ 年 〜</span></div>
     <table><thead><tr><th>月</th><th>日</th><th>誰</th><th>記号</th><th>メモ</th><th>担当</th></tr></thead>
-    <tbody>${blankRows(15, Array(6))}</tbody></table>
+    <tbody>${blankRows(12, 6)}</tbody></table>
   </section>`;
 }
 
@@ -47,12 +51,13 @@ export function cardMarkup(member, details = {}) {
       <header class="karte-document-head"><div><strong>会員カルテ</strong><span>${store || "店舗名：＿＿＿＿＿＿＿＿"}</span></div><div class="karte-head-note">作成日 ${created}　表面<br><em>郵便番号・電話番号は書きません</em></div></header>
       <section class="karte-person-box">
         <div class="karte-id"><small>お客様番号</small><strong>${memberId}</strong><span>保存棚　${shelf}</span></div>
-        <div class="karte-person-lines"><div><span>カナ名</span><strong>${kana}</strong></div><div><span>入会日</span><strong>${safe(details.joinDate)}</strong></div><div><span>プラン名</span><strong>${safe(details.planName)}</strong></div></div>
+        <div class="karte-person-lines"><div><span>カナ名</span><strong>${kana}</strong></div><div><span>入会日</span><strong>${safe(details.joinDate)}</strong></div></div>
         <div class="karte-staff-lines"><div class="karte-address-check">${details.addressCheck ? "☑" : "□"}　要住所確認</div><div>SF担当　${safe(details.sfStaff)}</div><div>DX担当　${safe(details.dxStaff)}</div></div>
+        <div class="karte-plan-line"><span>プラン名</span><strong>${safe(details.planName)}</strong></div>
       </section>
       <section class="karte-block karte-family"><h3>ご家族（この番号の方）<small>裏面の記録は「誰の分」を番号で書きます</small></h3><table><thead><tr><th>番号</th><th>カナ名</th><th>続柄</th><th>メモ</th></tr></thead><tbody><tr><td>1</td><td>${kana}</td><td>名義人本人</td><td></td></tr>${[2,3,4].map(n => `<tr><td>${n}</td><td></td><td></td><td></td></tr>`).join("")}</tbody></table></section>
-      <section class="karte-block karte-courses"><h3>受講する講座<small>空欄は手書きで足す（今後の講座）</small></h3><table><thead><tr><th>講座</th><th>受ける方</th><th>開始時期</th><th>メモ</th></tr></thead><tbody><tr><td>安全講習 基礎編</td><td></td><td></td><td></td></tr><tr><td>スマートライフ学 必要論</td><td></td><td></td><td></td></tr>${blankRows(5, Array(4))}</tbody></table></section>
-      <div class="karte-front-lower"><div><section class="karte-block karte-events"><h3>特別講座・イベント<small>自由に書く</small></h3><table><thead><tr><th>日付</th><th>参加した方</th><th>内容</th><th>担当</th></tr></thead><tbody>${blankRows(5, Array(4))}</tbody></table></section><section class="karte-block karte-contact"><h3>連絡の記録</h3><table><thead><tr><th>日付</th><th>担当</th><th>内容</th></tr></thead><tbody>${blankRows(5, Array(3))}</tbody></table></section></div><section class="karte-block karte-notes"><h3>メモ<small>ご希望・注意点など</small></h3><div>${Array.from({length:9}, () => "<i></i>").join("")}</div></section></div>
+      <section class="karte-block karte-courses"><h3>受講する講座<small>空欄は手書きで足す（今後の講座）</small></h3><table><thead><tr><th>講座</th><th>受ける方</th><th>開始時期</th><th>メモ</th></tr></thead><tbody><tr><td>安全講習 基礎編</td><td></td><td></td><td></td></tr><tr><td>スマートライフ学 必要論</td><td></td><td></td><td></td></tr>${blankRows(5, 4)}</tbody></table></section>
+      <div class="karte-front-lower"><div><section class="karte-block karte-events"><h3>特別講座・イベント<small>自由に書く</small></h3><table><thead><tr><th>日付</th><th>参加した方</th><th>内容</th><th>担当</th></tr></thead><tbody>${blankRows(5, 4)}</tbody></table></section><section class="karte-block karte-contact"><h3>連絡の記録</h3><table><thead><tr><th>日付</th><th>担当</th><th>内容</th></tr></thead><tbody>${blankRows(5, 3)}</tbody></table></section></div><section class="karte-block karte-notes"><h3>メモ<small>ご希望・注意点など</small></h3><div>${Array.from({length:9}, () => "<i></i>").join("")}</div></section></div>
       <footer><span>${footer}</span><span>A4 両面</span></footer>
     </article>
     <article class="karte-page karte-back" ${style}>
