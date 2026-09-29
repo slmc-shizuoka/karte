@@ -67,7 +67,7 @@ export default {
     return new Response(request.method === "HEAD" ? null : asset.body, {
       headers:{
         "content-type":asset.type,
-        "cache-control":path === "/" || path === "/app.js" ? "no-store" : "public, max-age=300",
+        "cache-control":"no-store",
         "x-content-type-options":"nosniff"
       }
     });

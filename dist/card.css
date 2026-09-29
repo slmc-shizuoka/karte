@@ -1,0 +1,84 @@
+.card-workspace { display:grid; grid-template-columns:minmax(290px,360px) minmax(0,1fr); gap:22px; align-items:start; }
+.card-editor { position:sticky; top:100px; display:grid; gap:16px; }
+.card-editor .data-card { padding:22px; }
+.card-editor h3 { margin:0 0 6px; font-size:1.08rem; }
+.card-editor p { margin:0 0 18px; color:var(--muted); font-size:.82rem; line-height:1.6; }
+.card-editor label { display:grid; gap:6px; margin-bottom:13px; color:#3c4043; font-size:.8rem; font-weight:700; }
+.card-editor input { min-height:42px; }
+.card-editor .card-check { display:flex; align-items:center; gap:8px; }
+.card-editor .card-check input { width:18px; min-height:18px; height:18px; }
+.card-field-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.card-editor-actions { display:grid; gap:9px; }
+.card-editor-actions button { width:100%; }
+.card-editor-actions .primary-button { border-radius:12px; }
+.card-ready-note { margin:0; padding:11px 13px; border-radius:10px; background:#e6f4ea; color:#137333; font-size:.81rem; font-weight:700; }
+.card-preview-shell { min-width:0; padding:16px; border:1px solid var(--line); border-radius:18px; background:#e9edf3; overflow:auto; }
+.card-preview-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0 0 15px; color:#4b5563; font-size:.8rem; font-weight:700; }
+.card-empty { display:grid; min-height:400px; place-content:center; text-align:center; color:var(--muted); }
+.card-empty strong { display:block; margin-bottom:8px; color:var(--ink); font-size:1.1rem; }
+.karte-pages { display:grid; justify-content:center; gap:20px; }
+.karte-page { position:relative; width:210mm; height:297mm; display:flex; flex-direction:column; gap:2.5mm; padding:8mm 11mm 6mm; overflow:hidden; background:#fff; color:#20324e; box-shadow:0 10px 28px rgba(25,40,66,.16); font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif; font-size:7pt; line-height:1.2; }
+.karte-page * { box-sizing:border-box; }
+.karte-status-band { height:10mm; flex:none; display:flex; align-items:center; gap:3mm; padding:0 3mm; background:var(--card-accent); color:#fff; }
+.karte-status-band b { display:grid; width:8mm; height:7mm; place-items:center; background:#fff; color:var(--card-accent); font-size:12pt; }
+.karte-status-band small { font-size:6pt; }
+.karte-status-band strong { font-size:8pt; }
+.karte-document-head { min-height:11mm; flex:none; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--card-accent); }
+.karte-document-head > div:first-child { display:flex; align-items:baseline; gap:5mm; }
+.karte-document-head strong { color:var(--card-accent); font-size:15pt; }
+.karte-document-head span { color:#20324e; font-size:7pt; }
+.karte-head-note { text-align:right; font-size:6pt; line-height:1.5; }
+.karte-head-note b { color:#20324e; font-size:7pt; }
+.karte-head-note em { color:#b34d12; font-style:normal; }
+.karte-person-box { min-height:32mm; flex:none; display:grid; grid-template-columns:27% 47% 26%; border:1px solid #8d9bac; }
+.karte-person-box > div { min-width:0; padding:2.6mm; }
+.karte-person-box > div + div { border-left:1px solid #8d9bac; }
+.karte-id { display:flex; flex-direction:column; gap:1.5mm; }
+.karte-id small { font-size:6pt; }
+.karte-id strong { font-size:17pt; line-height:1.1; }
+.karte-id span { margin-top:auto; overflow-wrap:anywhere; font-size:6.2pt; }
+.karte-person-lines, .karte-staff-lines { display:flex; flex-direction:column; justify-content:space-between; }
+.karte-person-lines > div { display:grid; grid-template-columns:16mm 1fr; gap:1mm; align-items:end; min-height:7mm; border-bottom:1px solid #8d9bac; }
+.karte-person-lines > div:last-child { grid-template-columns:16mm 1fr; font-size:6pt; }
+.karte-person-lines span { font-size:6.3pt; }
+.karte-person-lines strong { min-height:1em; overflow-wrap:anywhere; font-size:8pt; font-weight:600; }
+.karte-person-lines > div:last-child strong { font-size:6.5pt; }
+.karte-staff-lines > div { min-height:7mm; border-bottom:1px solid #8d9bac; font-size:6.5pt; }
+.karte-staff-lines > div:last-child { border-bottom:0; }
+.karte-address-check { font-size:8pt !important; }
+.karte-block { display:flex; flex-direction:column; min-height:0; }
+.karte-block h3 { height:6.5mm; flex:none; display:flex; justify-content:space-between; align-items:center; margin:0; padding:0 2mm; background:#20324e; color:#fff; font-size:7.5pt; }
+.karte-block h3 small { font-size:5.6pt; font-weight:400; }
+.karte-block table, .karte-year table { width:100%; height:100%; table-layout:fixed; border-collapse:collapse; }
+.karte-block th, .karte-block td, .karte-year th, .karte-year td { height:auto; padding:0 1mm; border:1px solid #8d9bac; text-align:center; overflow-wrap:anywhere; }
+.karte-block th, .karte-year th { height:6mm; background:#eaf0f5; color:#20324e; font-size:6pt; font-weight:700; }
+.karte-block td { font-size:6.5pt; }
+.karte-family { height:42mm; flex:none; }
+.karte-family th:first-child { width:8%; }.karte-family th:nth-child(2) { width:34%; }.karte-family th:nth-child(3) { width:19%; }
+.karte-courses { height:57mm; flex:none; }
+.karte-courses th:first-child { width:37%; }.karte-courses th:nth-child(2) { width:15%; }.karte-courses th:nth-child(3) { width:18%; }
+.karte-front-lower { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:5mm; }
+.karte-front-lower > div { min-height:0; display:grid; grid-template-rows:1fr 1fr; gap:4mm; }
+.karte-events th:first-child,.karte-contact th:first-child { width:19%; }.karte-events th:nth-child(2) { width:24%; }.karte-events th:last-child { width:18%; }.karte-contact th:nth-child(2) { width:19%; }
+.karte-notes { border:1px solid #8d9bac; }.karte-notes h3 { margin:-1px -1px 0; }.karte-notes > div { flex:1; display:flex; flex-direction:column; justify-content:space-around; padding:2mm 3mm; }.karte-notes i { height:1px; border-bottom:1px solid #b8c2ce; }
+.karte-page footer { height:5mm; flex:none; display:flex; justify-content:space-between; align-items:end; gap:3mm; border-top:1px solid #8d9bac; color:#455568; font-size:5.5pt; }
+.karte-page footer span:last-child { white-space:nowrap; }
+.karte-back .karte-document-head { min-height:15mm; }
+.karte-back .karte-document-head > div:first-child strong { font-size:15pt; }
+.karte-legend { height:8mm; flex:none; margin:0; font-size:6.2pt; }
+.karte-years { flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:8mm 10mm; }
+.karte-year { display:flex; flex-direction:column; min-height:0; }
+.karte-year-heading { height:7mm; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 2mm; background:#20324e; color:#fff; }
+.karte-year-heading strong { font-size:8pt; }.karte-year-heading span { font-size:6pt; }
+.karte-year th { height:6mm; }.karte-year th:nth-child(-n+4) { width:8%; }.karte-year th:last-child { width:14%; }
+.karte-year td { font-size:5pt; }
+@media (max-width:1080px) { .card-workspace { grid-template-columns:1fr; }.card-editor { position:static; }.card-editor .data-card { max-width:none; } }
+@media (max-width:700px) { .card-preview-shell { padding:10px; }.card-preview-head { align-items:flex-start; flex-direction:column; }.karte-pages { transform:scale(.72); transform-origin:top left; width:210mm; margin-bottom:-165mm; } }
+@media print {
+  @page { size:A4 portrait; margin:0; }
+  html, body { width:210mm; margin:0; padding:0; background:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .app-header, .connection-notice, .page-heading, .card-editor, .card-preview-head, #toast, .view:not(#cardView) { display:none !important; }
+  main, #appView, #cardView, .card-workspace, .card-preview-shell, .karte-pages { display:block !important; width:210mm !important; max-width:none !important; margin:0 !important; padding:0 !important; border:0 !important; background:#fff !important; box-shadow:none !important; overflow:visible !important; transform:none !important; }
+  .karte-page { margin:0 !important; box-shadow:none !important; break-after:page; page-break-after:always; }
+  .karte-page:last-child { break-after:auto; page-break-after:auto; }
+}

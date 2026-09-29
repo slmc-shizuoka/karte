@@ -112,6 +112,7 @@ main { width: min(1280px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 64
 .member-primary, .member-meta { padding: 26px; }
 .member-primary { border-right: 1px solid var(--line-soft); background: linear-gradient(145deg, #fff, #f7faff); }
 .member-number { margin: 8px 0 0; color: #174ea6; font-size: 1.52rem; font-weight: 800; letter-spacing: .02em; }
+.card-quick-open { margin-top: 16px; }
 .meta-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; margin: 0; }
 .meta-grid dt { color: var(--muted); font-size: .82rem; }
 .meta-grid dd { margin: 0; font-weight: 700; }

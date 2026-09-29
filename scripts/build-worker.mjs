@@ -5,7 +5,9 @@ const root = resolve(import.meta.dirname, "..");
 const assets = [
   ["/", "index.html", "text/html; charset=utf-8"],
   ["/app.js", "app.js", "text/javascript; charset=utf-8"],
+  ["/card.js", "card.js", "text/javascript; charset=utf-8"],
   ["/styles.css", "styles.css", "text/css; charset=utf-8"],
+  ["/card.css", "card.css", "text/css; charset=utf-8"],
   ["/data/members.json", "data/members.json", "application/json; charset=utf-8"],
   ["/data/shelves.json", "data/shelves.json", "application/json; charset=utf-8"]
 ];

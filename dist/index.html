@@ -8,6 +8,7 @@
   <title>会員カルテ棚検索</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='white'/%3E%3Crect x='12' y='12' width='18' height='18' rx='5' fill='%234285f4'/%3E%3Crect x='34' y='12' width='18' height='18' rx='5' fill='%23ea4335'/%3E%3Crect x='12' y='34' width='18' height='18' rx='5' fill='%23fbbc04'/%3E%3Crect x='34' y='34' width='18' height='18' rx='5' fill='%2334a853'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./card.css">
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -39,6 +40,7 @@
       </div>
       <nav class="tabs" aria-label="画面切り替え">
         <button class="tab is-active" data-view="search">検索</button>
+        <button class="tab" data-view="card">カルテ作成</button>
         <button class="tab" data-view="dashboard">来館状況</button>
         <button class="tab" data-view="manage">データ管理</button>
       </nav>
@@ -76,6 +78,40 @@
           <p>地区グループと現在の保存棚を表示します。</p>
         </div>
         <div id="results" class="results" aria-live="polite"></div>
+      </section>
+
+      <section id="cardView" class="view" aria-labelledby="cardTitle">
+        <div class="page-heading">
+          <div><p class="eyebrow">MEMBER KARTE</p><h2 id="cardTitle">カルテ作成</h2></div>
+          <p class="quiet">見本に合わせたA4両面・区分5色の印刷用カルテ</p>
+        </div>
+        <div class="card-workspace">
+          <div class="card-editor">
+            <section class="data-card">
+              <h3>会員を選択</h3>
+              <p>会員番号を入力すると、現在のステータスと保存棚を反映します。</p>
+              <form id="cardLookupForm">
+                <label for="cardMemberInput">会員番号<input id="cardMemberInput" inputmode="numeric" autocomplete="off" placeholder="会員番号を入力" required></label>
+                <button class="primary-button full" type="submit">カルテを作成</button>
+              </form>
+              <p id="cardReadyNote" class="card-ready-note" hidden></p>
+            </section>
+            <section id="cardDetailsPanel" class="data-card" hidden>
+              <h3>印刷する内容</h3>
+              <p>会員データにない項目は印刷時に入力できます。入力内容はシートへ保存されません。郵便番号・電話番号はカルテに載せません。</p>
+              <label for="cardStore">BASE（店舗）<input id="cardStore" placeholder="例：SL富士BASE"></label>
+              <label for="cardKana">カナ名<input id="cardKana" placeholder="カナ名を入力"></label>
+              <div class="card-field-pair"><label for="cardJoined">入会日<input id="cardJoined" type="date"></label><label for="cardPlan">プラン名<input id="cardPlan" placeholder="プラン名"></label></div>
+              <div class="card-field-pair"><label for="cardSfStaff">SF担当<input id="cardSfStaff" placeholder="担当者"></label><label for="cardDxStaff">DX担当<input id="cardDxStaff" placeholder="担当者"></label></div>
+              <label class="card-check" for="cardAddressCheck"><input id="cardAddressCheck" type="checkbox">要住所確認</label>
+              <div class="card-editor-actions"><button id="cardPrintButton" class="primary-button" type="button">PDF保存・印刷</button></div>
+            </section>
+          </div>
+          <div class="card-preview-shell">
+            <div class="card-preview-head"><span>プレビュー — 表面 / 裏面</span><span>印刷設定：A4・両面・カラー</span></div>
+            <div id="cardPreview" class="card-empty"><div><strong>会員番号を入力してください</strong><span>作成したカルテの表面と裏面をここで確認できます。</span></div></div>
+          </div>
+        </div>
       </section>
 
       <section id="dashboardView" class="view" aria-labelledby="dashboardTitle">

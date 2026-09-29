@@ -1,3 +1,5 @@
+import { cardMarkup, normalizeWideArea } from "./card.js";
+
 const APP_PASSWORD = "1130";
 const SHEET_API_URL = "/api/sheet";
 const STORAGE = {
@@ -21,6 +23,7 @@ let sheetConnected = false;
 let sheetSyncPromise = null;
 let sheetSyncTimer = null;
 let lastSheetSyncAt = 0;
+let cardMemberId = "";
 const PAGE_SIZE = 30;
 const AUTO_SYNC_INTERVAL = 30000;
 
@@ -36,7 +39,8 @@ const loadJSON = (key, fallback) => {
 };
 const saveJSON = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 const escapeHTML = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
-const currentShelf = member => overrides[member.memberId]?.shelf || member.shelf || "UNKNOWN";
+const currentShelf = member => normalizeWideArea(overrides[member.memberId]?.shelf || member.shelf || "UNKNOWN");
+const normalizeMember = member => ({ ...member, districtGroup:normalizeWideArea(member.districtGroup), shelf:normalizeWideArea(member.shelf) });
 
 async function sheetRequest(action, payload = {}) {
   const attempts = action === "load" ? 2 : 1;
@@ -96,9 +100,9 @@ function seedShelfRows() {
 }
 
 function applySheetState(state) {
-  members = Array.isArray(state.members) ? state.members : [];
-  shelves = Array.isArray(state.shelves) && state.shelves.length ? state.shelves : ["UNKNOWN"];
-  movements = Array.isArray(state.movements) ? state.movements : [];
+  members = Array.isArray(state.members) ? state.members.map(normalizeMember) : [];
+  shelves = Array.isArray(state.shelves) && state.shelves.length ? state.shelves.map(normalizeWideArea) : ["UNKNOWN"];
+  movements = Array.isArray(state.movements) ? state.movements.map(move => ({ ...move, districtGroup:normalizeWideArea(move.districtGroup), from:normalizeWideArea(move.from), to:normalizeWideArea(move.to) })) : [];
   overrides = {};
   saveJSON(STORAGE.members, members);
   saveJSON(STORAGE.shelves, shelves);
@@ -155,14 +159,16 @@ async function boot() {
       fetch("./data/shelves.json")
     ]);
     if (!memberResponse.ok || !shelfResponse.ok) throw new Error("app data failed");
-    baseMembers = await memberResponse.json();
+    baseMembers = (await memberResponse.json()).map(normalizeMember);
     shelfCatalog = await shelfResponse.json();
+    shelfCatalog.groups = shelfCatalog.groups.map(group => ({ ...group, name:normalizeWideArea(group.name) }));
+    shelfCatalog.labels = shelfCatalog.labels.map(normalizeWideArea);
     defaultShelves = shelfCatalog.labels;
   } catch {
     baseMembers = [];
   }
-  members = loadJSON(STORAGE.members, baseMembers);
-  shelves = loadJSON(STORAGE.shelves, defaultShelves);
+  members = loadJSON(STORAGE.members, baseMembers).map(normalizeMember);
+  shelves = loadJSON(STORAGE.shelves, defaultShelves).map(normalizeWideArea);
   overrides = loadJSON(STORAGE.overrides, {});
   movements = loadJSON(STORAGE.movements, []);
   bindEvents();
@@ -198,6 +204,16 @@ function bindEvents() {
   $$(".segment").forEach(button => button.addEventListener("click", () => setSearchMode(button.dataset.mode)));
   $("#searchForm").addEventListener("submit", event => { event.preventDefault(); runSearch(); });
   $("#results").addEventListener("click", handleResultClick);
+  $("#cardLookupForm").addEventListener("submit", event => {
+    event.preventDefault();
+    prepareCard($("#cardMemberInput").value, "カルテを作成しました。");
+  });
+  $("#cardDetailsPanel").addEventListener("input", renderCardPreview);
+  $("#cardDetailsPanel").addEventListener("change", renderCardPreview);
+  $("#cardPrintButton").addEventListener("click", () => {
+    if (!cardMemberId) return;
+    window.print();
+  });
   $("#manageSearch").addEventListener("input", () => { managePage = 1; renderMemberTable(); });
   $("#prevPage").addEventListener("click", () => { if (managePage > 1) { managePage--; renderMemberTable(); } });
   $("#nextPage").addEventListener("click", () => { managePage++; renderMemberTable(); });
@@ -248,6 +264,47 @@ function showView(name) {
   $$(".view").forEach(v => v.classList.toggle("is-active", v.id === `${name}View`));
   if (name === "dashboard") renderDashboard();
   if (name === "manage") { renderMemberTable(); renderShelves(); }
+  if (name === "card") $("#cardMemberInput").focus();
+}
+function prepareCard(rawMemberId, message = "カルテを作成しました。") {
+  const id = normalizeDigits(rawMemberId);
+  const member = members.find(item => normalizeDigits(item.memberId) === id);
+  if (!member) { toast("会員番号が見つかりません。"); return false; }
+  if (cardMemberId !== String(member.memberId)) {
+    ["#cardStore", "#cardKana", "#cardJoined", "#cardPlan", "#cardSfStaff", "#cardDxStaff"].forEach(selector => { $(selector).value = ""; });
+    $("#cardAddressCheck").checked = false;
+  }
+  cardMemberId = String(member.memberId);
+  $("#cardMemberInput").value = cardMemberId;
+  $("#cardDetailsPanel").hidden = false;
+  $("#cardReadyNote").hidden = false;
+  $("#cardReadyNote").textContent = `${message} 会員番号 ${cardMemberId} ／ 区分 ${member.status || "未設定"}`;
+  renderCardPreview();
+  showView("card");
+  return true;
+}
+function renderCardPreview() {
+  if (!cardMemberId) return;
+  const member = members.find(item => String(item.memberId) === cardMemberId);
+  if (!member) {
+    cardMemberId = "";
+    $("#cardDetailsPanel").hidden = true;
+    $("#cardReadyNote").hidden = true;
+    $("#cardPreview").classList.add("card-empty");
+    $("#cardPreview").innerHTML = "<div><strong>会員番号を入力してください</strong><span>作成したカルテの表面と裏面をここで確認できます。</span></div>";
+    return;
+  }
+  const details = {
+    storeName:$("#cardStore").value.trim(),
+    kanaName:$("#cardKana").value.trim(),
+    joinDate:$("#cardJoined").value.replaceAll("-", "/"),
+    planName:$("#cardPlan").value.trim(),
+    sfStaff:$("#cardSfStaff").value.trim(),
+    dxStaff:$("#cardDxStaff").value.trim(),
+    addressCheck:$("#cardAddressCheck").checked
+  };
+  $("#cardPreview").classList.remove("card-empty");
+  $("#cardPreview").innerHTML = cardMarkup({ ...member, shelf:currentShelf(member) }, details);
 }
 function setSearchMode(mode) {
   searchMode = mode;
@@ -277,7 +334,7 @@ function renderResults(found) {
   $("#results").innerHTML = found.map(member => {
     const shelf = currentShelf(member);
     return `<article class="member-card" data-id="${escapeHTML(member.memberId)}">
-      <div class="member-primary"><p class="eyebrow">MEMBER NUMBER</p><p class="member-number">${escapeHTML(member.memberId)}</p></div>
+      <div class="member-primary"><p class="eyebrow">MEMBER NUMBER</p><p class="member-number">${escapeHTML(member.memberId)}</p><button class="mini-button card-quick-open" data-action="create-card" type="button">カルテを作成</button></div>
       <div class="member-meta"><dl class="meta-grid"><dt>郵便番号</dt><dd>${escapeHTML(member.postalCode)}</dd><dt>地区グループ</dt><dd><span class="district-badge">${escapeHTML(member.districtGroup)}</span></dd><dt>会員ステータス</dt><dd><span class="status-badge">${escapeHTML(member.status || "未設定")}</span></dd><dt>住所地区</dt><dd>${escapeHTML(member.area || "―")}</dd></dl></div>
       <div class="record-controls">
         <div class="quick-control status-control"><label for="status-${escapeHTML(member.memberId)}">会員ステータス</label><select class="result-status" id="status-${escapeHTML(member.memberId)}">${statusOptionsMarkup(member.status || "未設定")}</select><button class="save-record save-status" data-action="save-status">ステータスを更新</button></div>
@@ -314,6 +371,10 @@ async function handleResultClick(event) {
   if (!button) return;
   const card = button.closest(".member-card");
   const member = members.find(m => String(m.memberId) === card.dataset.id);
+  if (button.dataset.action === "create-card") {
+    prepareCard(member.memberId);
+    return;
+  }
   if (button.dataset.action === "save-status") {
     await saveResultStatus(button, card, member);
     return;
@@ -364,6 +425,7 @@ async function saveResultStatus(button, card, member) {
     lastSheetSyncAt = Date.now();
     setConnectionStatus("Googleスプレッドシートと同期済み", connectedDetail(), true);
     toast(`会員ステータスを「${nextStatus}」へ更新しました。`);
+    prepareCard(member.memberId, "ステータス変更に合わせて新しいカルテを作成しました。");
   } catch (error) {
     select.value = previousStatus;
     toast(error.message || "会員ステータスを保存できませんでした。");
@@ -557,14 +619,15 @@ async function handleMemberTableClick(event) {
 async function saveMember(event) {
   event.preventDefault();
   const original = $("#originalMemberId").value;
+  const previousMember = original ? members.find(m => String(m.memberId) === original) : null;
   const id = normalizeDigits($("#memberIdField").value);
   const postalCode = normalizePostal($("#postalField").value);
-  const districtGroup = $("#districtField").value.trim();
+  const districtGroup = normalizeWideArea($("#districtField").value.trim());
   const status = $("#statusField").value.trim();
   const shelf = $("#shelfField").value;
   if (!id || !postalCode || !districtGroup || !status) return;
   if (members.some(m => String(m.memberId) === id && String(m.memberId) !== original)) { toast("同じ会員番号が登録されています。"); return; }
-  const record = { memberId:id, postalCode, districtGroup, status, area:"手動登録", shelf };
+  const record = { memberId:id, postalCode, districtGroup, status, area:previousMember?.area || "手動登録", shelf };
   const submit = event.submitter;
   submit.disabled = true;
   submit.textContent = "保存中…";
@@ -575,6 +638,9 @@ async function saveMember(event) {
     delete overrides[id];
     persistMembers();
     $("#memberDialog").close(); refreshAll(); toast(original ? "会員データを更新しました。" : "会員データを追加しました。");
+    if (!original || previousMember?.status !== status) {
+      prepareCard(id, original ? "ステータス変更に合わせて新しいカルテを作成しました。" : "会員追加に合わせてカルテを作成しました。");
+    }
   } catch (error) {
     toast(error.message || "保存できませんでした。");
   } finally {
@@ -671,7 +737,7 @@ function refreshAll() {
   $("#districtOptions").innerHTML = districts.map(d => `<option value="${escapeHTML(d)}"></option>`).join("");
   const statuses = [...new Set(members.map(m => String(m.status || "未設定").trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b,"ja"));
   $("#statusOptions").innerHTML = statuses.map(status => `<option value="${escapeHTML(status)}"></option>`).join("");
-  renderDashboard(); renderMemberTable(); renderShelves();
+  renderDashboard(); renderMemberTable(); renderShelves(); renderCardPreview();
 }
 function formatDate(iso) { return new Date(iso).toLocaleString("ja-JP", {month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
 let toastTimer;
