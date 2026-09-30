@@ -87,10 +87,9 @@
 @media (max-width:1080px) { .card-workspace { grid-template-columns:1fr; }.card-editor { position:static; }.card-editor .data-card { max-width:none; } }
 @media (max-width:700px) { .card-preview-shell { padding:10px; }.card-preview-head { align-items:flex-start; flex-direction:column; } }
 @media print {
-  @page { size:A4 portrait; margin:0; }
-  html,body { width:210mm; margin:0; padding:0; background:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .app-header,.connection-notice,.page-heading,.card-editor,.card-preview-head,#toast,.view:not(#cardView) { display:none !important; }
-  main,#appView,#cardView,.card-workspace,.card-preview-shell,.karte-pages { display:block !important; width:210mm !important; min-width:210mm !important; max-width:none !important; margin:0 !important; padding:0 !important; border:0 !important; background:#fff !important; box-shadow:none !important; overflow:visible !important; transform:none !important; animation:none !important; }
-  .karte-page { margin:0 !important; box-shadow:none !important; break-after:page; page-break-after:always; }
-  .karte-page:last-child { break-after:auto; page-break-after:auto; }
+  body.print-card { width:210mm; margin:0; padding:0; background:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body.print-card .app-header,body.print-card .connection-notice,body.print-card .page-heading,body.print-card .card-editor,body.print-card .card-preview-head,body.print-card #toast,body.print-card .view:not(#cardView) { display:none !important; }
+  body.print-card main,body.print-card #appView,body.print-card #cardView,body.print-card .card-workspace,body.print-card .card-preview-shell,body.print-card .karte-pages { display:block !important; width:210mm !important; min-width:210mm !important; max-width:none !important; margin:0 !important; padding:0 !important; border:0 !important; background:#fff !important; box-shadow:none !important; overflow:visible !important; transform:none !important; animation:none !important; }
+  body.print-card .karte-page { margin:0 !important; box-shadow:none !important; break-after:page; page-break-after:always; }
+  body.print-card .karte-page:last-child { break-after:auto; page-break-after:auto; }
 }

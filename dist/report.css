@@ -1,0 +1,53 @@
+.report-controls { display:flex; align-items:end; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+.report-controls label { display:grid; gap:6px; min-width:190px; color:var(--muted); font-size:.79rem; font-weight:750; }
+.report-controls input { min-height:43px; }
+.report-controls button { min-height:43px; }
+.report-preview { max-width:1050px; margin:0 auto 34px; }
+.monthly-sheet { padding:34px 40px; border:1px solid var(--line); border-radius:18px; background:#fff; box-shadow:var(--shadow-sm); color:#202124; }
+.report-head { display:flex; justify-content:space-between; align-items:end; gap:16px; padding-bottom:18px; border-bottom:3px solid var(--blue); }
+.report-head p { margin:0 0 8px; color:var(--blue); font-size:.69rem; font-weight:800; letter-spacing:.16em; }
+.report-head h3 { margin:0; font-size:1.65rem; letter-spacing:-.02em; }
+.report-head > span { color:var(--muted); font-size:.78rem; }
+.report-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; margin:20px 0; }
+.report-kpis > div { padding:17px; border-radius:12px; background:#f3f7ff; }
+.report-kpis > div:nth-child(2) { background:#fff6e4; }
+.report-kpis > div:nth-child(3) { background:#eef8f1; }
+.report-kpis > div:nth-child(4) { background:#f7f3ff; }
+.report-kpis span { display:block; color:#566274; font-size:.76rem; font-weight:750; }
+.report-kpis strong { display:inline-block; margin-top:10px; font-size:1.9rem; line-height:1; }
+.report-kpis small { margin-left:4px; color:var(--muted); font-size:.7rem; }
+.report-section-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:10px; }
+.report-section-head h4 { margin:0; font-size:.94rem; }
+.report-section-head span { color:var(--muted); font-size:.7rem; }
+.report-daily { margin:0 0 24px; padding:18px 19px 15px; border:1px solid var(--line); border-radius:12px; }
+.report-day-grid { display:grid; grid-template-columns:repeat(31,minmax(0,1fr)); align-items:end; gap:3px; min-height:112px; }
+.report-day { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; color:#596579; font-size:.58rem; white-space:nowrap; }
+.report-day-track { display:flex; align-items:end; width:100%; height:74px; background:#f1f5fb; border-radius:3px 3px 0 0; }
+.report-day-track i { display:block; width:100%; min-height:0; background:var(--blue); border-radius:3px 3px 0 0; }
+.report-day strong { color:#202124; font-size:.62rem; }
+.report-breakdown-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 22px; }
+.report-breakdown { min-width:0; break-inside:avoid; }
+.report-breakdown table { width:100%; min-width:0; table-layout:fixed; }
+.report-breakdown th,.report-breakdown td { padding:6px 8px; font-size:.74rem; line-height:1.2; overflow-wrap:anywhere; }
+.report-breakdown th:last-child,.report-breakdown td:last-child { width:65px; text-align:right; }
+.report-more { margin:7px 0 0; color:var(--muted); font-size:.68rem; }
+.report-footer { margin-top:22px; padding-top:10px; border-top:1px solid var(--line); color:#5f6368; font-size:.69rem; line-height:1.55; }
+@media (max-width:700px) {
+  .monthly-sheet { padding:22px 16px; }
+  .report-head { display:block; }
+  .report-head > span { display:block; margin-top:8px; }
+  .report-kpis { grid-template-columns:repeat(2,1fr); }
+  .report-breakdown-grid { grid-template-columns:1fr; }
+  .report-day-grid { overflow-x:auto; grid-template-columns:repeat(31,minmax(22px,1fr)); }
+}
+@media print {
+  @page { size:A4 portrait; margin:0; }
+  html:has(body.print-report),html:has(body.print-card) { background:#fff !important; }
+  body.print-report { width:210mm; margin:0; padding:0; background:white !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body.print-report .app-header,body.print-report .connection-notice,body.print-report .page-heading,body.print-report .report-controls,body.print-report #toast,body.print-report .view:not(#reportView) { display:none !important; }
+  body.print-report #appView,body.print-report main,body.print-report #reportView,body.print-report .report-preview { display:block !important; width:210mm !important; max-width:none !important; margin:0 !important; padding:0 !important; background:white !important; box-shadow:none !important; animation:none !important; transform:none !important; }
+  body.print-report .monthly-sheet { width:210mm; margin:0; padding:11mm 12mm; border:0; border-radius:0; box-shadow:none; }
+  body.print-report .report-daily { break-inside:avoid; }
+  body.print-report .report-kpis { break-inside:avoid; }
+  body.print-report .report-breakdown-grid { gap:14px 18px; }
+}

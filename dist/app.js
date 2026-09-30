@@ -1,4 +1,5 @@
 import { cardMarkup, cardTypeForStatus, normalizeWideArea, shouldPrepareCardAfterMemberSave } from "./card.js";
+import { REPORT_DIMENSIONS, dashboardCsvRows, dashboardSnapshot, monthlyReport, monthlyReportCsvRows, toCsv, tokyoMonthKey, trendRows } from "./analytics.js";
 
 const APP_PASSWORD = "1130";
 const SHEET_API_URL = "/api/sheet";
@@ -18,6 +19,7 @@ let overrides = {};
 let movements = [];
 let searchMode = "member";
 let dashboardMode = "current";
+let selectedReport = null;
 let managePage = 1;
 let sheetConnected = false;
 let sheetSyncPromise = null;
@@ -172,6 +174,8 @@ async function boot() {
   overrides = loadJSON(STORAGE.overrides, {});
   movements = loadJSON(STORAGE.movements, []);
   bindEvents();
+  $("#reportMonth").value = tokyoMonthKey(new Date());
+  $("#reportMonth").max = tokyoMonthKey(new Date());
   refreshAll();
   if (sessionStorage.getItem("karute.auth") === "ok") unlock();
 }
@@ -213,8 +217,25 @@ function bindEvents() {
   $("#cardAddMemberButton").addEventListener("click", () => openMemberDialog());
   $("#cardPrintButton").addEventListener("click", () => {
     if (!cardMemberId || !$("#cardStatus").value) return;
+    document.body.classList.add("print-card");
     window.print();
   });
+  $("#dashboardExportButton").addEventListener("click", () => {
+    const modeLabel = { current:"現在", monthly:"月間推移", daily:"日別推移" }[dashboardMode];
+    downloadCsv(`来館状況_${modeLabel}_${tokyoMonthKey(new Date())}.csv`, dashboardCsvRows(analyticsMembers(), movements, dashboardMode, new Date(), $("#shelfDistrictFilter").value));
+  });
+  $("#shelfDistrictFilter").addEventListener("change", renderDashboard);
+  $("#reportCreateButton").addEventListener("click", createReport);
+  $("#reportMonth").addEventListener("change", createReport);
+  $("#reportExportButton").addEventListener("click", () => {
+    if (selectedReport) downloadCsv(`月次レポート_${selectedReport.month}.csv`, monthlyReportCsvRows(selectedReport));
+  });
+  $("#reportPrintButton").addEventListener("click", () => {
+    if (!selectedReport) return;
+    document.body.classList.add("print-report");
+    window.print();
+  });
+  window.addEventListener("afterprint", () => document.body.classList.remove("print-report", "print-card"));
   $("#manageSearch").addEventListener("input", () => { managePage = 1; renderMemberTable(); });
   $("#prevPage").addEventListener("click", () => { if (managePage > 1) { managePage--; renderMemberTable(); } });
   $("#nextPage").addEventListener("click", () => { managePage++; renderMemberTable(); });
@@ -264,6 +285,10 @@ function showView(name) {
   $$(".tab").forEach(t => t.classList.toggle("is-active", t.dataset.view === name));
   $$(".view").forEach(v => v.classList.toggle("is-active", v.id === `${name}View`));
   if (name === "dashboard") renderDashboard();
+  if (name === "report") {
+    $("#reportMonth").max = tokyoMonthKey(new Date());
+    if (!selectedReport) createReport();
+  }
   if (name === "manage") { renderMemberTable(); renderShelves(); }
   if (name === "card") $("#cardMemberInput").focus();
 }
@@ -446,74 +471,44 @@ async function saveResultStatus(button, card, member) {
 }
 
 function renderDashboard() {
-  const now = new Date();
-  const visitedMembers = members.filter(member => currentShelf(member) !== "UNKNOWN");
-  const districtCounts = {};
-  members.forEach(m => { const district = m.districtGroup || "未設定"; districtCounts[district] = (districtCounts[district] || 0) + 1; });
-  const shelfCounts = {};
-  members.forEach(m => { const shelf = currentShelf(m); shelfCounts[shelf] = (shelfCounts[shelf] || 0) + 1; });
-  const municipalityCounts = {};
-  const addressCounts = {};
-  visitedMembers.forEach(member => {
-    const municipality = municipalityFromArea(member.area);
-    const address = normalizedAddressArea(member.area);
-    municipalityCounts[municipality] = (municipalityCounts[municipality] || 0) + 1;
-    addressCounts[address] = (addressCounts[address] || 0) + 1;
-  });
-  const monthMovements = movements.filter(move => isSameMonth(move.changedAt, now));
-  const todayMovements = movements.filter(move => isSameDay(move.changedAt, now));
-  const monthVisitors = uniqueMemberCount(monthMovements);
-  const todayVisitors = uniqueMemberCount(todayMovements);
-  const memberMap = new Map(members.map(member => [String(member.memberId), member]));
-  const statusVisitors = new Map();
-  monthMovements.forEach(move => {
-    const memberId = String(move.memberId || "");
-    if (!memberId) return;
-    const status = String(memberMap.get(memberId)?.status || move.status || "未設定");
-    if (!statusVisitors.has(status)) statusVisitors.set(status, new Set());
-    statusVisitors.get(status).add(memberId);
-  });
-  const statusCounts = Object.fromEntries([...statusVisitors].map(([status, ids]) => [status, ids.size]));
-  const baseMonthCount = monthVisitors;
-  const knownCount = members.length - (shelfCounts.UNKNOWN || 0);
+  const data = dashboardSnapshot(analyticsMembers(), movements);
+  const { monthVisitors, todayVisitors, knownCount } = data;
+  const selectedDistrict = $("#shelfDistrictFilter").value;
+  const districtMembers = selectedDistrict ? members.filter(member => String(member.districtGroup || "未設定") === selectedDistrict) : members;
+  const districtLookup = new Map(members.map(member => [String(member.memberId), member.districtGroup || "未設定"]));
+  const districtMovements = selectedDistrict
+    ? movements.filter(move => String(move.districtGroup || districtLookup.get(String(move.memberId)) || "未設定") === selectedDistrict)
+    : movements;
   $("#kpiGrid").innerHTML = [
-    ["今月の来館", monthVisitors, "今月棚移動した会員"], ["本日の来館", todayVisitors, "本日棚移動した会員"], ["BASE月間来館", baseMonthCount, "今月の来館数"], ["保存棚登録済み", knownCount, `全${members.length.toLocaleString("ja-JP")}件`]
+    ["今月の来館", monthVisitors, "今月棚移動した会員"], ["本日の来館", todayVisitors, "本日棚移動した会員"], ["BASE月間来館", monthVisitors, "今月の来館数"], ["保存棚登録済み", knownCount, `全${members.length.toLocaleString("ja-JP")}件`]
   ].map(([label,value,note]) => `<div class="kpi"><span>${label}</span><strong>${Number(value).toLocaleString("ja-JP")}</strong><span>${note}</span></div>`).join("");
   if (dashboardMode === "current") {
     setTrendNotes("来館確認済み", "住所地区・来館確認済み", "登録会員", "現在の保存場所");
     $("#statusChartNote").textContent = "今月の来館・ユニーク会員";
-    renderBars("#municipalityChart", municipalityCounts, "来館確認済みの市町村データはありません。");
-    renderBars("#addressChart", addressCounts, "来館確認済みの住所地区データはありません。");
-    renderBars("#districtChart", districtCounts, "地区データはありません。");
-    renderBars("#shelfChart", shelfCounts, "棚データはありません。");
-    renderBars("#statusChart", statusCounts, "今月のステータス別来館履歴はありません。");
+    $("#blockChartNote").textContent = "番地登録済み・来館確認済み";
+    renderBars("#municipalityChart", data.counts.municipality, "来館確認済みの市町村データはありません。");
+    renderBars("#addressChart", data.counts.address, "来館確認済みの住所地区データはありません。");
+    renderBars("#blockChart", data.counts.block, "番地データはありません。");
+    renderBars("#districtChart", data.counts.district, "地区データはありません。");
+    const shelfCounts = {};
+    districtMembers.forEach(member => { const shelf = currentShelf(member); shelfCounts[shelf] = (shelfCounts[shelf] || 0) + 1; });
+    renderBars("#shelfChart", shelfCounts, "この地区グループの棚データはありません。");
+    renderBars("#statusChart", data.counts.status, "今月のステータス別来館履歴はありません。");
   } else {
     const note = dashboardMode === "monthly" ? "直近6か月・ユニーク会員" : "今月の日別・ユニーク会員";
     setTrendNotes(note, note, note, note);
     $("#statusChartNote").textContent = note;
-    renderTrendTable("#municipalityChart", dashboardMode, (move, member) => municipalityFromArea(member?.area), "市町村別の来館履歴はありません。");
-    renderTrendTable("#addressChart", dashboardMode, (move, member) => normalizedAddressArea(member?.area), "住所地区別の来館履歴はありません。");
-    renderTrendTable("#districtChart", dashboardMode, (move, member) => move.districtGroup || member?.districtGroup || "未設定", "地区別の来館履歴はありません。");
-    renderTrendTable("#shelfChart", dashboardMode, move => move.to || "未設定", "保存棚別の来館履歴はありません。");
-    renderTrendTable("#statusChart", dashboardMode, (move, member) => move.status || member?.status || "未設定", "ステータス別の来館履歴はありません。");
+    $("#blockChartNote").textContent = note;
+    renderTrendTable("#municipalityChart", dashboardMode, "municipality", "市町村別の来館履歴はありません。");
+    renderTrendTable("#addressChart", dashboardMode, "address", "住所地区別の来館履歴はありません。");
+    renderTrendTable("#blockChart", dashboardMode, "block", "番地別の来館履歴はありません。");
+    renderTrendTable("#districtChart", dashboardMode, "district", "地区別の来館履歴はありません。");
+    renderTrendTable("#shelfChart", dashboardMode, "shelf", "保存棚別の来館履歴はありません。", districtMovements);
+    renderTrendTable("#statusChart", dashboardMode, "status", "ステータス別の来館履歴はありません。");
   }
+  $("#shelfChartNote").textContent += selectedDistrict ? `・${selectedDistrict}` : "・全地区";
   $("#movementList").innerHTML = movements.length ? movements.slice(0,10).map(m => `<div class="movement-row"><strong>${escapeHTML(m.memberId)}</strong><span class="movement-route">${escapeHTML(m.from)} → ${escapeHTML(m.to)}</span><span class="movement-date">${formatDate(m.changedAt)}・${escapeHTML(m.districtGroup)}</span></div>`).join("") : `<p class="quiet">棚移動履歴はまだありません。</p>`;
   $("#dashboardUpdated").textContent = `最終表示 ${new Date().toLocaleString("ja-JP", {month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}`;
-}
-function validDate(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-function isSameMonth(value, reference) {
-  const date = validDate(value);
-  return Boolean(date && date.getFullYear() === reference.getFullYear() && date.getMonth() === reference.getMonth());
-}
-function isSameDay(value, reference) {
-  const date = validDate(value);
-  return Boolean(date && date.getFullYear() === reference.getFullYear() && date.getMonth() === reference.getMonth() && date.getDate() === reference.getDate());
-}
-function uniqueMemberCount(entries) {
-  return new Set(entries.map(entry => String(entry.memberId || "")).filter(Boolean)).size;
 }
 function setTrendNotes(municipality, address, district, shelf) {
   $("#municipalityChartNote").textContent = municipality;
@@ -521,63 +516,72 @@ function setTrendNotes(municipality, address, district, shelf) {
   $("#districtChartNote").textContent = district;
   $("#shelfChartNote").textContent = shelf;
 }
-function normalizedAddressArea(area) {
-  const value = String(area || "").trim();
-  return !value || value === "手動登録" || value === "CSV取込" ? "住所地区未設定" : value;
-}
-function municipalityFromArea(area) {
-  const value = normalizedAddressArea(area);
-  if (value === "住所地区未設定") return value;
-  const match = value.match(/^(.+?市(?:.+?区)?|.+?区|.+?[町村])/);
-  return match?.[1] || value;
-}
 function renderBars(selector, data, empty) {
   const entries = Object.entries(data).sort((a,b) => b[1] - a[1]);
   const max = Math.max(1, ...entries.map(([,v]) => v));
   $(selector).innerHTML = entries.length ? entries.map(([label,value]) => `<div class="bar-row"><span class="bar-label" title="${escapeHTML(label)}">${escapeHTML(label)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, value / max * 100)}%"></div></div><span class="bar-value">${value}</span></div>`).join("") : `<p class="quiet">${empty}</p>`;
 }
-function localDateKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+function analyticsMembers() {
+  return members.map(member => ({ ...member, shelf:currentShelf(member) }));
 }
-function monthKey(date) {
-  return localDateKey(date).slice(0, 7);
-}
-function trendBuckets(mode) {
-  const now = new Date();
-  if (mode === "monthly") {
-    return Array.from({ length:6 }, (_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-      return { key:monthKey(date), label:`${String(date.getFullYear()).slice(-2)}年${date.getMonth() + 1}月` };
-    });
-  }
-  return Array.from({ length:now.getDate() }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth(), index + 1);
-    return { key:localDateKey(date), label:`${index + 1}日` };
-  });
-}
-function renderTrendTable(selector, mode, categoryFor, empty) {
-  const buckets = trendBuckets(mode);
-  const bucketKeys = new Set(buckets.map(bucket => bucket.key));
-  const memberMap = new Map(members.map(member => [String(member.memberId), member]));
-  const series = new Map();
-  movements.forEach(move => {
-    const date = validDate(move.changedAt);
-    if (!date) return;
-    const bucketKey = mode === "monthly" ? monthKey(date) : localDateKey(date);
-    if (!bucketKeys.has(bucketKey)) return;
-    const memberId = String(move.memberId || "");
-    const category = String(categoryFor(move, memberMap.get(memberId)) || "未設定");
-    if (!series.has(category)) series.set(category, new Map());
-    const categoryBuckets = series.get(category);
-    if (!categoryBuckets.has(bucketKey)) categoryBuckets.set(bucketKey, new Set());
-    categoryBuckets.get(bucketKey).add(memberId);
-  });
-  const rows = [...series.entries()].map(([label, values]) => {
-    const counts = buckets.map(bucket => values.get(bucket.key)?.size || 0);
-    return { label, counts, total:counts.reduce((sum, value) => sum + value, 0) };
-  }).filter(row => row.total > 0).sort((a,b) => b.total - a.total || a.label.localeCompare(b.label, "ja"));
+function renderTrendTable(selector, mode, dimension, empty, entries = movements) {
+  const { buckets, rows } = trendRows(analyticsMembers(), entries, mode, dimension);
   if (!rows.length) { $(selector).innerHTML = `<p class="quiet">${empty}</p>`; return; }
   $(selector).innerHTML = `<div class="trend-table-wrap"><table class="trend-table"><thead><tr><th>区分</th>${buckets.map(bucket => `<th>${escapeHTML(bucket.label)}</th>`).join("")}<th>合計</th></tr></thead><tbody>${rows.map(row => `<tr><th title="${escapeHTML(row.label)}">${escapeHTML(row.label)}</th>${row.counts.map(value => `<td class="${value ? "" : "is-zero"}">${value}</td>`).join("")}<td class="trend-total">${row.total}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function createReport() {
+  try {
+    selectedReport = monthlyReport(analyticsMembers(), movements, $("#reportMonth").value);
+    renderReport();
+  } catch (error) {
+    selectedReport = null;
+    $("#reportExportButton").disabled = true;
+    $("#reportPrintButton").disabled = true;
+    toast(error.message || "レポートを作成できませんでした。");
+  }
+}
+function renderReport() {
+  if (!selectedReport) return;
+  const report = selectedReport;
+  const maxDay = Math.max(1, ...report.days.map(day => day.visitors));
+  const maxRows = 10;
+  const format = value => Number(value).toLocaleString("ja-JP");
+  const cards = REPORT_DIMENSIONS.map(dimension => {
+    const all = report.categories[dimension.key];
+    const shown = all.slice(0, maxRows);
+    return `<section class="report-breakdown"><div class="report-section-head"><h4>${escapeHTML(dimension.title)}</h4><span>${format(all.length)}区分</span></div>
+      <table><thead><tr><th>区分</th><th>軒数</th></tr></thead><tbody>
+      ${shown.length ? shown.map(row => `<tr><td>${escapeHTML(row.label)}</td><td>${format(row.count)}</td></tr>`).join("") : '<tr><td colspan="2">記録はありません</td></tr>'}
+      </tbody></table>${all.length > maxRows ? `<p class="report-more">ほか${format(all.length - maxRows)}区分。全件はCSVに記載。</p>` : ""}</section>`;
+  }).join("");
+  $("#reportPreview").innerHTML = `<article class="monthly-sheet">
+    <header class="report-head"><div><p>MEMBER FILES · MONTHLY REPORT</p><h3>${escapeHTML(report.label)} 来館レポート</h3></div><span>棚移動履歴に基づく集計</span></header>
+    <div class="report-kpis">
+      <div><span>月間来館</span><strong>${format(report.visitors)}</strong><small>軒</small></div>
+      <div><span>BASE月間来館</span><strong>${format(report.baseVisitors)}</strong><small>軒</small></div>
+      <div><span>棚移動記録</span><strong>${format(report.movementCount)}</strong><small>件</small></div>
+      <div><span>来館があった日</span><strong>${format(report.activeDays)}</strong><small>日</small></div>
+    </div>
+    <section class="report-daily"><div class="report-section-head"><h4>日別来館</h4><span>同日の会員番号は重複除外</span></div>
+      <div class="report-day-grid">${report.days.map(day => `<div class="report-day" title="${escapeHTML(day.key)}：${format(day.visitors)}軒"><span>${escapeHTML(day.label)}</span><div class="report-day-track"><i style="height:${Math.max(day.visitors ? 8 : 0, day.visitors / maxDay * 100)}%"></i></div><strong>${format(day.visitors)}</strong></div>`).join("")}</div>
+    </section>
+    <div class="report-breakdown-grid">${cards}</div>
+    <footer class="report-footer">月間来館・BASE月間来館は、対象月に棚移動した会員番号を重複除外した軒数です。棚別はその月の移動先であり、過去月末の保管総数ではありません。区分ごとに重複除外するため、区分の合計は月間来館と一致しない場合があります。住所地区と番地は現在の会員データを使用し、番地のない住所は「番地未登録」です。掲載外の区分と日別数値はCSVに記載。</footer>
+  </article>`;
+  $("#reportExportButton").disabled = false;
+  $("#reportPrintButton").disabled = false;
+}
+function downloadCsv(filename, rows) {
+  const url = URL.createObjectURL(new Blob([toCsv(rows)], { type:"text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast("CSVを書き出しました。");
 }
 
 function filteredMembers() {
@@ -602,6 +606,7 @@ function openMemberDialog(member = null) {
   $("#memberIdField").value = member?.memberId || "";
   $("#postalField").value = member?.postalCode || "";
   $("#districtField").value = member?.districtGroup || "";
+  $("#areaField").value = member?.area && !["手動登録", "CSV取込"].includes(member.area) ? member.area : "";
   $("#statusField").value = member?.status || "未設定";
   $("#shelfField").innerHTML = shelfOptions(member ? currentShelf(member) : "UNKNOWN", member);
   $("#memberDialog").showModal();
@@ -637,7 +642,8 @@ async function saveMember(event) {
   const shelf = $("#shelfField").value;
   if (!id || !postalCode || !districtGroup || !status) return;
   if (members.some(m => String(m.memberId) === id && String(m.memberId) !== original)) { toast("同じ会員番号が登録されています。"); return; }
-  const record = { memberId:id, postalCode, districtGroup, status, area:previousMember?.area || "手動登録", shelf };
+  const area = $("#areaField").value.trim() || previousMember?.area || "手動登録";
+  const record = { memberId:id, postalCode, districtGroup, status, area, shelf };
   const submit = event.submitter;
   submit.disabled = true;
   submit.textContent = "保存中…";
@@ -703,11 +709,8 @@ async function removeShelf(event) {
 }
 
 function exportCSV() {
-  const rows = [["会員番号","郵便番号","地区グループ","会員ステータス","保存棚"], ...members.map(m => [m.memberId,m.postalCode,m.districtGroup,m.status || "未設定",currentShelf(m)])];
-  const csv = "\ufeff" + rows.map(row => row.map(value => `"${String(value ?? "").replaceAll('"','""')}"`).join(",")).join("\r\n");
-  const url = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
-  const a = document.createElement("a"); a.href = url; a.download = `会員カルテデータ_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
-  toast("CSVを書き出しました。");
+  const rows = [["会員番号","郵便番号","地区グループ","会員ステータス","住所地区・番地","保存棚"], ...members.map(m => [m.memberId,m.postalCode,m.districtGroup,m.status || "未設定",m.area || "",currentShelf(m)])];
+  downloadCsv(`会員カルテデータ_${tokyoMonthKey(new Date())}.csv`, rows);
 }
 async function importCSV(event) {
   const file = event.target.files[0]; if (!file) return;
@@ -717,11 +720,14 @@ async function importCSV(event) {
   const col = name => headers.indexOf(name);
   if (["会員番号","郵便番号","地区グループ"].some(name => col(name) < 0)) { toast("必要な列が見つかりません。"); event.target.value = ""; return; }
   const imported = [];
+  const existingAreas = new Map(members.map(member => [String(member.memberId), member.area]));
   rows.forEach(row => {
     const id = normalizeDigits(row[col("会員番号")]); if (!id) return;
     const shelf = col("保存棚") >= 0 && row[col("保存棚")] ? row[col("保存棚")].trim() : "UNKNOWN";
     const status = col("会員ステータス") >= 0 && row[col("会員ステータス")] ? row[col("会員ステータス")].trim() : "未設定";
-    imported.push({ memberId:id, postalCode:normalizePostal(row[col("郵便番号")]), districtGroup:(row[col("地区グループ")]||"").trim(), status, area:"CSV取込", shelf });
+    const areaColumn = col("住所地区・番地") >= 0 ? col("住所地区・番地") : col("住所地区");
+    const area = areaColumn >= 0 ? String(row[areaColumn] || "").trim() : "";
+    imported.push({ memberId:id, postalCode:normalizePostal(row[col("郵便番号")]), districtGroup:(row[col("地区グループ")]||"").trim(), status, area:area || existingAreas.get(id) || "CSV取込", shelf });
   });
   if (!imported.length) { toast("取り込める会員データがありません。"); event.target.value = ""; return; }
   if (!confirm(`現在の会員データを、CSVの${imported.length.toLocaleString("ja-JP")}件で置き換えますか？`)) { event.target.value = ""; return; }
@@ -745,9 +751,16 @@ function refreshAll() {
   $("#memberCount").textContent = `登録会員 ${members.length.toLocaleString("ja-JP")}件`;
   const districts = [...new Set(members.map(m => m.districtGroup).filter(Boolean))].sort((a,b) => a.localeCompare(b,"ja"));
   $("#districtOptions").innerHTML = districts.map(d => `<option value="${escapeHTML(d)}"></option>`).join("");
+  const selectedDistrict = $("#shelfDistrictFilter").value;
+  $("#shelfDistrictFilter").innerHTML = '<option value="">全地区グループ</option>' + districts.map(d => `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`).join("");
+  $("#shelfDistrictFilter").value = districts.includes(selectedDistrict) ? selectedDistrict : "";
   const statuses = [...new Set(members.map(m => String(m.status || "未設定").trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b,"ja"));
   $("#statusOptions").innerHTML = statuses.map(status => `<option value="${escapeHTML(status)}"></option>`).join("");
   renderDashboard(); renderMemberTable(); renderShelves(); renderCardPreview();
+  if (selectedReport) {
+    try { selectedReport = monthlyReport(analyticsMembers(), movements, selectedReport.month); renderReport(); }
+    catch { selectedReport = null; }
+  }
 }
 function formatDate(iso) { return new Date(iso).toLocaleString("ja-JP", {month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
 let toastTimer;

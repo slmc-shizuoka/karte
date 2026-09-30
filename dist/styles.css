@@ -150,11 +150,15 @@ main { width: min(1280px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 64
 .card-kicker.green { color: var(--green); }
 .bar-list { display: grid; gap: 12px; }
 .scroll-chart { max-height: 410px; overflow: auto; padding-right: 7px; scrollbar-width: thin; scrollbar-color: #bdc1c6 transparent; }
+.chart-help { margin:-9px 0 14px; color:var(--muted); font-size:.73rem; line-height:1.5; }
+.chart-filter { display:grid; gap:5px; margin:-6px 0 16px; color:var(--muted); font-size:.73rem; font-weight:700; }
+.chart-filter select { min-height:39px; padding:7px 11px; font-size:.84rem; }
 .bar-row { display: grid; grid-template-columns: minmax(135px, .7fr) 2fr 46px; gap: 10px; align-items: center; font-size: .82rem; }
 .bar-label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .bar-track { height: 9px; overflow: hidden; border-radius: 99px; background: #edf2fa; }
 .bar-fill { height: 100%; min-width: 2px; border-radius: inherit; background: var(--blue); }
 #addressChart .bar-fill { background: var(--red); }
+#blockChart .bar-fill { background: #c34537; }
 #districtChart .bar-fill { background: var(--yellow); }
 #shelfChart .bar-fill { background: var(--green); }
 .bar-value { text-align: right; color: var(--ink); font-weight: 800; }
