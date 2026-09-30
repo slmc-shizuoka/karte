@@ -8,11 +8,10 @@
 .report-head p { margin:0 0 8px; color:var(--blue); font-size:.69rem; font-weight:800; letter-spacing:.16em; }
 .report-head h3 { margin:0; font-size:1.65rem; letter-spacing:-.02em; }
 .report-head > span { color:var(--muted); font-size:.78rem; }
-.report-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; margin:20px 0; }
+.report-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin:20px 0; }
 .report-kpis > div { padding:17px; border-radius:12px; background:#f3f7ff; }
-.report-kpis > div:nth-child(2) { background:#fff6e4; }
-.report-kpis > div:nth-child(3) { background:#eef8f1; }
-.report-kpis > div:nth-child(4) { background:#f7f3ff; }
+.report-kpis > div:nth-child(2) { background:#eef8f1; }
+.report-kpis > div:nth-child(3) { background:#f7f3ff; }
 .report-kpis span { display:block; color:#566274; font-size:.76rem; font-weight:750; }
 .report-kpis strong { display:inline-block; margin-top:10px; font-size:1.9rem; line-height:1; }
 .report-kpis small { margin-left:4px; color:var(--muted); font-size:.7rem; }

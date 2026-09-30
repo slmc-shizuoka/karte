@@ -5,7 +5,6 @@ const TOKYO_DATE = new Intl.DateTimeFormat("en-US", {
 export const REPORT_DIMENSIONS = [
   { key:"municipality", title:"市町村別" },
   { key:"address", title:"住所地区別" },
-  { key:"block", title:"番地別" },
   { key:"district", title:"地区グループ別" },
   { key:"shelf", title:"移動先の保存棚別" },
   { key:"shelfDistrict", title:"地区グループ×移動先の保存棚別" },
@@ -26,11 +25,6 @@ export function tokyoMonthKey(value) {
 export function normalizedAddressArea(area) {
   const value = String(area || "").trim();
   return !value || value === "手動登録" || value === "CSV取込" ? "住所地区未設定" : value;
-}
-
-export function blockFromArea(area) {
-  const value = normalizedAddressArea(area);
-  return /[0-9０-９]|丁目|番地/.test(value) ? value : "番地未登録";
 }
 
 export function municipalityFromArea(area) {
@@ -77,7 +71,6 @@ const uniqueVisitors = entries => new Set(entries.map(entry => String(entry.memb
 function categoryFor(dimension, move, member) {
   if (dimension === "municipality") return municipalityFromArea(member?.area);
   if (dimension === "address") return normalizedAddressArea(member?.area);
-  if (dimension === "block") return blockFromArea(member?.area);
   if (dimension === "district") return move.districtGroup || member?.districtGroup || "未設定";
   if (dimension === "shelf") return move.to || "未設定";
   if (dimension === "shelfDistrict") return `${move.districtGroup || member?.districtGroup || "未設定"} / ${move.to || "未設定"}`;
@@ -114,7 +107,6 @@ export function dashboardSnapshot(members, movements, now = new Date()) {
     counts:{
       municipality:countValues(visitedMembers, member => municipalityFromArea(member.area)),
       address:countValues(visitedMembers, member => normalizedAddressArea(member.area)),
-      block:countValues(visitedMembers, member => blockFromArea(member.area)),
       district:countValues(members, member => member.districtGroup || "未設定"),
       shelf,
       shelfDistrict:countValues(members, member => `${member.districtGroup || "未設定"} / ${shelfFor(member)}`),
@@ -180,7 +172,7 @@ export function monthlyReport(members, movements, month, now = new Date(), shelv
   });
   return {
     month, label:`${year}年${monthNumber}月`, visitors:uniqueVisitors(entries),
-    baseVisitors:uniqueVisitors(entries), movementCount:entries.length,
+    movementCount:entries.length,
     activeDays:days.filter(day => day.visitors > 0).length,
     days,
     categories:Object.fromEntries(REPORT_DIMENSIONS.map(dimension => [
@@ -192,15 +184,14 @@ export function monthlyReport(members, movements, month, now = new Date(), shelv
 export function dashboardCsvRows(members, movements, mode, now = new Date(), shelfDistrict = "", shelves = []) {
   const snapshot = dashboardSnapshot(members, movements, now);
   const rows = [["画面", "集計項目", "区分", "期間", "軒数", "集計方法"]];
-  rows.push(["共通", "今月の来館", "全体", snapshot.month, snapshot.monthVisitors, "棚移動履歴・会員番号重複除外"]);
+  rows.push(["共通", "今月の来館数", "全体", snapshot.month, snapshot.monthVisitors, "棚移動履歴・会員番号重複除外"]);
   rows.push(["共通", "本日の来館", "全体", snapshot.day, snapshot.todayVisitors, "棚移動履歴・会員番号重複除外"]);
-  rows.push(["共通", "BASE月間来館", "全体", snapshot.month, snapshot.monthVisitors, "今月の来館数と同じ"]);
   rows.push(["共通", "保存棚登録済み", "全体", snapshot.day, snapshot.knownCount, "現在の会員データ"]);
   for (const dimension of REPORT_DIMENSIONS) {
     if (mode === "current") {
       const period = dimension.key === "status" ? snapshot.month : snapshot.day;
       const method = dimension.key === "status" ? "今月の棚移動・会員番号重複除外"
-        : ["municipality", "address", "block"].includes(dimension.key) ? "現在の保存棚登録済み会員データ" : "現在の会員データ";
+        : ["municipality", "address"].includes(dimension.key) ? "現在の保存棚登録済み会員データ" : "現在の会員データ";
       const title = dimension.key === "shelf" ? `現在の保存棚別${shelfDistrict ? `（${shelfDistrict}）` : ""}` : dimension.key === "shelfDistrict" ? "地区グループ×現在の保存棚別" : dimension.title;
       const counts = dimension.key === "shelf" && shelfDistrict
         ? countValues(members.filter(member => String(member.districtGroup || "未設定") === shelfDistrict), member => member.shelf || "UNKNOWN")
@@ -228,7 +219,6 @@ export function dashboardCsvRows(members, movements, mode, now = new Date(), she
 export function monthlyReportCsvRows(report) {
   const rows = [["対象月", "集計項目", "区分", "軒数", "集計方法"]];
   rows.push([report.month, "月間来館", "全体", report.visitors, "棚移動履歴・会員番号重複除外"]);
-  rows.push([report.month, "BASE月間来館", "全体", report.baseVisitors, "月間来館と同じ"]);
   rows.push([report.month, "棚移動記録", "全体", report.movementCount, "履歴の行数"]);
   report.days.forEach(day => rows.push([report.month, "日別来館", day.key, day.visitors, "同日内で会員番号重複除外"]));
   REPORT_DIMENSIONS.forEach(dimension => report.categories[dimension.key].forEach(row => {

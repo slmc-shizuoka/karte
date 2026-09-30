@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   dashboardSnapshot, dashboardCsvRows, monthlyReport, monthlyReportCsvRows,
-  toCsv, tokyoDayKey, trendRows, blockFromArea, shelfOrderComparator
+  toCsv, tokyoDayKey, trendRows, shelfOrderComparator
 } from "../dist/analytics.js";
 
 const now = new Date("2026-09-29T12:00:00+09:00");
@@ -29,27 +29,25 @@ test("画面のKPIとCSVが同じ重複除外数を使う", () => {
   assert.equal(data.knownCount, 2);
   assert.equal(data.counts.district["富士"], 2);
   assert.equal(data.counts.municipality["静岡市"], 1);
-  assert.equal(data.counts.block["番地未登録"], 2);
   const rows = dashboardCsvRows(members, movements, "current", now);
-  assert.deepEqual(rows.find(row => row[1] === "今月の来館").slice(2, 5), ["全体", "2026-09", 2]);
+  assert.deepEqual(rows.find(row => row[1] === "今月の来館数").slice(2, 5), ["全体", "2026-09", 2]);
+  assert.ok(!rows.some(row => /BASE月間来館|番地別/.test(row[1])));
 });
 
 test("月次レポートは日別・区分別も会員番号で重複除外する", () => {
   const report = monthlyReport(members, movements, "2026-09", now);
   assert.equal(report.visitors, 2);
-  assert.equal(report.baseVisitors, 2);
   assert.equal(report.movementCount, 3);
   assert.equal(report.activeDays, 2);
   assert.equal(report.days.find(day => day.key === "2026-09-29").visitors, 2);
   assert.deepEqual(report.categories.shelf.map(row => [row.label, row.count]), [["9月", 2], ["特別棚", 1]]);
   assert.equal(monthlyReportCsvRows(report).find(row => row[1] === "月間来館")[3], 2);
   assert.equal(report.categories.shelfDistrict.find(row => row.label === "静岡 / 特別棚").count, 1);
+  assert.ok(!monthlyReportCsvRows(report).some(row => /BASE月間来館|番地別/.test(row[1])));
   assert.throws(() => monthlyReport(members, movements, "2026-10", now), /未来/);
 });
 
-test("番地は詳細がある住所のみ個別計上し、棚は地区で絞れる", () => {
-  assert.equal(blockFromArea("静岡市葵区一番町"), "番地未登録");
-  assert.equal(blockFromArea("静岡市葵区一番町1-2"), "静岡市葵区一番町1-2");
+test("棚は地区で絞れる", () => {
   const current = dashboardCsvRows(members, movements, "current", now, "富士");
   assert.deepEqual(current.filter(row => row[1] === "現在の保存棚別（富士）").map(row => [row[2], row[4]]), [["9月", 1], ["UNKNOWN", 1]]);
   const daily = dashboardCsvRows(members, movements, "daily", now, "富士");

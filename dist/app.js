@@ -480,15 +480,13 @@ function renderDashboard() {
     ? movements.filter(move => String(move.districtGroup || districtLookup.get(String(move.memberId)) || "未設定") === selectedDistrict)
     : movements;
   $("#kpiGrid").innerHTML = [
-    ["今月の来館", monthVisitors, "今月棚移動した会員"], ["本日の来館", todayVisitors, "本日棚移動した会員"], ["BASE月間来館", monthVisitors, "今月の来館数"], ["保存棚登録済み", knownCount, `全${members.length.toLocaleString("ja-JP")}件`]
+    ["今月の来館数", monthVisitors, "今月棚移動した会員"], ["本日の来館", todayVisitors, "本日棚移動した会員"], ["保存棚登録済み", knownCount, `全${members.length.toLocaleString("ja-JP")}件`]
   ].map(([label,value,note]) => `<div class="kpi"><span>${label}</span><strong>${Number(value).toLocaleString("ja-JP")}</strong><span>${note}</span></div>`).join("");
   if (dashboardMode === "current") {
     setTrendNotes("来館確認済み", "住所地区・来館確認済み", "登録会員", "現在の保存場所");
     $("#statusChartNote").textContent = "今月の来館・ユニーク会員";
-    $("#blockChartNote").textContent = "番地登録済み・来館確認済み";
     renderBars("#municipalityChart", data.counts.municipality, "来館確認済みの市町村データはありません。");
     renderBars("#addressChart", data.counts.address, "来館確認済みの住所地区データはありません。");
-    renderBars("#blockChart", data.counts.block, "番地データはありません。");
     renderBars("#districtChart", data.counts.district, "地区データはありません。");
     const shelfCounts = {};
     districtMembers.forEach(member => { const shelf = currentShelf(member); shelfCounts[shelf] = (shelfCounts[shelf] || 0) + 1; });
@@ -498,10 +496,8 @@ function renderDashboard() {
     const note = dashboardMode === "monthly" ? "直近6か月・ユニーク会員" : "今月の日別・ユニーク会員";
     setTrendNotes(note, note, note, note);
     $("#statusChartNote").textContent = note;
-    $("#blockChartNote").textContent = note;
     renderTrendTable("#municipalityChart", dashboardMode, "municipality", "市町村別の来館履歴はありません。");
     renderTrendTable("#addressChart", dashboardMode, "address", "住所地区別の来館履歴はありません。");
-    renderTrendTable("#blockChart", dashboardMode, "block", "番地別の来館履歴はありません。");
     renderTrendTable("#districtChart", dashboardMode, "district", "地区別の来館履歴はありません。");
     renderTrendTable("#shelfChart", dashboardMode, "shelf", "保存棚別の来館履歴はありません。", districtMovements);
     renderTrendTable("#statusChart", dashboardMode, "status", "ステータス別の来館履歴はありません。");
@@ -559,7 +555,6 @@ function renderReport() {
     <header class="report-head"><div><p>MEMBER FILES · MONTHLY REPORT</p><h3>${escapeHTML(report.label)} 来館レポート</h3></div><span>棚移動履歴に基づく集計</span></header>
     <div class="report-kpis">
       <div><span>月間来館</span><strong>${format(report.visitors)}</strong><small>軒</small></div>
-      <div><span>BASE月間来館</span><strong>${format(report.baseVisitors)}</strong><small>軒</small></div>
       <div><span>棚移動記録</span><strong>${format(report.movementCount)}</strong><small>件</small></div>
       <div><span>来館があった日</span><strong>${format(report.activeDays)}</strong><small>日</small></div>
     </div>
@@ -567,7 +562,7 @@ function renderReport() {
       <div class="report-day-grid">${report.days.map(day => `<div class="report-day" title="${escapeHTML(day.key)}：${format(day.visitors)}軒"><span>${escapeHTML(day.label)}</span><div class="report-day-track"><i style="height:${Math.max(day.visitors ? 8 : 0, day.visitors / maxDay * 100)}%"></i></div><strong>${format(day.visitors)}</strong></div>`).join("")}</div>
     </section>
     <div class="report-breakdown-grid">${cards}</div>
-    <footer class="report-footer">月間来館・BASE月間来館は、対象月に棚移動した会員番号を重複除外した軒数です。棚別はその月の移動先であり、過去月末の保管総数ではありません。区分ごとに重複除外するため、区分の合計は月間来館と一致しない場合があります。住所地区と番地は現在の会員データを使用し、番地のない住所は「番地未登録」です。掲載外の区分と日別数値はCSVに記載。</footer>
+    <footer class="report-footer">月間来館は、対象月に棚移動した会員番号を重複除外した軒数です。棚別はその月の移動先であり、過去月末の保管総数ではありません。区分ごとに重複除外するため、区分の合計は月間来館と一致しない場合があります。住所地区は現在の会員データを使用します。掲載外の区分と日別数値はCSVに記載。</footer>
   </article>`;
   $("#reportExportButton").disabled = false;
   $("#reportPrintButton").disabled = false;

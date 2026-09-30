@@ -129,12 +129,11 @@ main { width: min(1280px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 64
 .shelf-tag { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; color: var(--muted); font-size: .75rem; }
 .shelf-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
 .kpi { position: relative; min-height: 132px; overflow: hidden; padding: 21px; border: 1px solid var(--line); border-radius: 18px; background: white; box-shadow: var(--shadow-sm); }
 .kpi::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--blue); }
 .kpi:nth-child(2)::before { background: var(--red); }
-.kpi:nth-child(3)::before { background: var(--yellow); }
-.kpi:nth-child(4)::before { background: var(--green); }
+.kpi:nth-child(3)::before { background: var(--green); }
 .kpi strong { display: block; margin: 18px 0 6px; font-size: 2rem; line-height: 1; font-weight: 750; }
 .kpi span { color: var(--muted); font-size: .84rem; }
 .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -150,7 +149,6 @@ main { width: min(1280px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 64
 .card-kicker.green { color: var(--green); }
 .bar-list { display: grid; gap: 12px; }
 .scroll-chart { max-height: 410px; overflow: auto; padding-right: 7px; scrollbar-width: thin; scrollbar-color: #bdc1c6 transparent; }
-.chart-help { margin:-9px 0 14px; color:var(--muted); font-size:.73rem; line-height:1.5; }
 .chart-filter { display:grid; gap:5px; margin:-6px 0 16px; color:var(--muted); font-size:.73rem; font-weight:700; }
 .chart-filter select { min-height:39px; padding:7px 11px; font-size:.84rem; }
 .bar-row { display: grid; grid-template-columns: minmax(135px, .7fr) 2fr 46px; gap: 10px; align-items: center; font-size: .82rem; }
@@ -158,7 +156,6 @@ main { width: min(1280px, calc(100% - 40px)); margin: 0 auto; padding: 24px 0 64
 .bar-track { height: 9px; overflow: hidden; border-radius: 99px; background: #edf2fa; }
 .bar-fill { height: 100%; min-width: 2px; border-radius: inherit; background: var(--blue); }
 #addressChart .bar-fill { background: var(--red); }
-#blockChart .bar-fill { background: #c34537; }
 #districtChart .bar-fill { background: var(--yellow); }
 #shelfChart .bar-fill { background: var(--green); }
 .bar-value { text-align: right; color: var(--ink); font-weight: 800; }
