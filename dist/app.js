@@ -1,5 +1,5 @@
 import { cardMarkup, cardTypeForStatus, normalizeWideArea, shouldPrepareCardAfterMemberSave } from "./card.js";
-import { REPORT_DIMENSIONS, dashboardCsvRows, dashboardSnapshot, monthlyReport, monthlyReportCsvRows, toCsv, tokyoMonthKey, trendRows } from "./analytics.js";
+import { REPORT_DIMENSIONS, dashboardCsvRows, dashboardSnapshot, monthlyReport, monthlyReportCsvRows, shelfOrderComparator, toCsv, tokyoMonthKey, trendRows } from "./analytics.js";
 
 const APP_PASSWORD = "1130";
 const SHEET_API_URL = "/api/sheet";
@@ -222,7 +222,7 @@ function bindEvents() {
   });
   $("#dashboardExportButton").addEventListener("click", () => {
     const modeLabel = { current:"現在", monthly:"月間推移", daily:"日別推移" }[dashboardMode];
-    downloadCsv(`来館状況_${modeLabel}_${tokyoMonthKey(new Date())}.csv`, dashboardCsvRows(analyticsMembers(), movements, dashboardMode, new Date(), $("#shelfDistrictFilter").value));
+    downloadCsv(`来館状況_${modeLabel}_${tokyoMonthKey(new Date())}.csv`, dashboardCsvRows(analyticsMembers(), movements, dashboardMode, new Date(), $("#shelfDistrictFilter").value, shelves));
   });
   $("#shelfDistrictFilter").addEventListener("change", renderDashboard);
   $("#reportCreateButton").addEventListener("click", createReport);
@@ -492,7 +492,7 @@ function renderDashboard() {
     renderBars("#districtChart", data.counts.district, "地区データはありません。");
     const shelfCounts = {};
     districtMembers.forEach(member => { const shelf = currentShelf(member); shelfCounts[shelf] = (shelfCounts[shelf] || 0) + 1; });
-    renderBars("#shelfChart", shelfCounts, "この地区グループの棚データはありません。");
+    renderBars("#shelfChart", shelfCounts, "この地区グループの棚データはありません。", shelfOrderComparator(shelves));
     renderBars("#statusChart", data.counts.status, "今月のステータス別来館履歴はありません。");
   } else {
     const note = dashboardMode === "monthly" ? "直近6か月・ユニーク会員" : "今月の日別・ユニーク会員";
@@ -516,8 +516,8 @@ function setTrendNotes(municipality, address, district, shelf) {
   $("#districtChartNote").textContent = district;
   $("#shelfChartNote").textContent = shelf;
 }
-function renderBars(selector, data, empty) {
-  const entries = Object.entries(data).sort((a,b) => b[1] - a[1]);
+function renderBars(selector, data, empty, compareLabels = null) {
+  const entries = Object.entries(data).sort((a,b) => compareLabels ? compareLabels(a[0], b[0]) : b[1] - a[1]);
   const max = Math.max(1, ...entries.map(([,v]) => v));
   $(selector).innerHTML = entries.length ? entries.map(([label,value]) => `<div class="bar-row"><span class="bar-label" title="${escapeHTML(label)}">${escapeHTML(label)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, value / max * 100)}%"></div></div><span class="bar-value">${value}</span></div>`).join("") : `<p class="quiet">${empty}</p>`;
 }
@@ -525,14 +525,14 @@ function analyticsMembers() {
   return members.map(member => ({ ...member, shelf:currentShelf(member) }));
 }
 function renderTrendTable(selector, mode, dimension, empty, entries = movements) {
-  const { buckets, rows } = trendRows(analyticsMembers(), entries, mode, dimension);
+  const { buckets, rows } = trendRows(analyticsMembers(), entries, mode, dimension, new Date(), shelves);
   if (!rows.length) { $(selector).innerHTML = `<p class="quiet">${empty}</p>`; return; }
   $(selector).innerHTML = `<div class="trend-table-wrap"><table class="trend-table"><thead><tr><th>区分</th>${buckets.map(bucket => `<th>${escapeHTML(bucket.label)}</th>`).join("")}<th>合計</th></tr></thead><tbody>${rows.map(row => `<tr><th title="${escapeHTML(row.label)}">${escapeHTML(row.label)}</th>${row.counts.map(value => `<td class="${value ? "" : "is-zero"}">${value}</td>`).join("")}<td class="trend-total">${row.total}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function createReport() {
   try {
-    selectedReport = monthlyReport(analyticsMembers(), movements, $("#reportMonth").value);
+    selectedReport = monthlyReport(analyticsMembers(), movements, $("#reportMonth").value, new Date(), shelves);
     renderReport();
   } catch (error) {
     selectedReport = null;
@@ -758,7 +758,7 @@ function refreshAll() {
   $("#statusOptions").innerHTML = statuses.map(status => `<option value="${escapeHTML(status)}"></option>`).join("");
   renderDashboard(); renderMemberTable(); renderShelves(); renderCardPreview();
   if (selectedReport) {
-    try { selectedReport = monthlyReport(analyticsMembers(), movements, selectedReport.month); renderReport(); }
+    try { selectedReport = monthlyReport(analyticsMembers(), movements, selectedReport.month, new Date(), shelves); renderReport(); }
     catch { selectedReport = null; }
   }
 }

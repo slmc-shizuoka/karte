@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   dashboardSnapshot, dashboardCsvRows, monthlyReport, monthlyReportCsvRows,
-  toCsv, tokyoDayKey, trendRows, blockFromArea
+  toCsv, tokyoDayKey, trendRows, blockFromArea, shelfOrderComparator
 } from "../dist/analytics.js";
 
 const now = new Date("2026-09-29T12:00:00+09:00");
@@ -55,6 +55,19 @@ test("番地は詳細がある住所のみ個別計上し、棚は地区で絞�
   const daily = dashboardCsvRows(members, movements, "daily", now, "富士");
   assert.ok(daily.some(row => row[1] === "移動先の保存棚別（富士）" && row[2] === "9月" && row[3] === "2026-09-29" && row[4] === 1));
   assert.ok(!daily.some(row => row[1] === "移動先の保存棚別（富士）" && row[2] === "特別棚"));
+});
+
+test("保存棚別は軒数ではなく保存棚一覧の順番で表示・出力する", () => {
+  const order = ["UNKNOWN", "特別棚", "9月", "10月"];
+  const compare = shelfOrderComparator(order);
+  assert.deepEqual(["9月", "特別棚", "UNKNOWN"].sort(compare), ["UNKNOWN", "特別棚", "9月"]);
+  const trend = trendRows(members, movements, "daily", "shelf", now, order);
+  assert.deepEqual(trend.rows.map(row => row.label), ["特別棚", "9月"]);
+  const currentCsv = dashboardCsvRows(members, movements, "current", now, "", order);
+  assert.deepEqual(currentCsv.filter(row => row[1] === "現在の保存棚別").map(row => row[2]), ["UNKNOWN", "9月"]);
+  const report = monthlyReport(members, movements, "2026-09", now, order);
+  assert.deepEqual(report.categories.shelf.map(row => row.label), ["特別棚", "9月"]);
+  assert.deepEqual(report.categories.shelfDistrict.map(row => row.label), ["静岡 / 特別棚", "静岡 / 9月", "富士 / 9月"]);
 });
 
 test("推移の表示値とCSVは同じデータを使用する", () => {

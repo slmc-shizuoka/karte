@@ -41,6 +41,28 @@ export function municipalityFromArea(area) {
 }
 
 const sortedCounts = counts => Object.entries(counts).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], "ja"));
+export function shelfOrderComparator(shelves, dimension = "shelf") {
+  const positions = new Map(shelves.map((label, index) => [String(label), index]));
+  const shelfLabel = label => {
+    const value = String(label);
+    const divider = value.indexOf(" / ");
+    return dimension === "shelfDistrict" && divider >= 0 ? value.slice(divider + 3) : value;
+  };
+  return (a, b) => {
+    const first = shelfLabel(a);
+    const second = shelfLabel(b);
+    const firstIndex = positions.get(first) ?? Number.POSITIVE_INFINITY;
+    const secondIndex = positions.get(second) ?? Number.POSITIVE_INFINITY;
+    return (firstIndex === secondIndex ? 0 : firstIndex - secondIndex)
+      || first.localeCompare(second, "ja", { numeric:true })
+      || String(a).localeCompare(String(b), "ja", { numeric:true });
+  };
+}
+const sortedCategoryCounts = (counts, dimension, shelves) => {
+  if (!["shelf", "shelfDistrict"].includes(dimension)) return sortedCounts(counts);
+  const compare = shelfOrderComparator(shelves, dimension);
+  return Object.entries(counts).sort((a, b) => compare(a[0], b[0]));
+};
 const countValues = (values, labelFor) => {
   const counts = {};
   values.forEach(value => {
@@ -119,7 +141,7 @@ export function trendBuckets(mode, now = new Date()) {
   throw new Error(`Unknown trend mode: ${mode}`);
 }
 
-export function trendRows(members, movements, mode, dimension, now = new Date()) {
+export function trendRows(members, movements, mode, dimension, now = new Date(), shelves = []) {
   const buckets = trendBuckets(mode, now);
   const keys = new Set(buckets.map(bucket => bucket.key));
   const lookup = memberLookup(members);
@@ -134,14 +156,17 @@ export function trendRows(members, movements, mode, dimension, now = new Date())
     if (!series.get(label).has(key)) series.get(label).set(key, new Set());
     series.get(label).get(key).add(id);
   });
+  const compare = shelfOrderComparator(shelves, dimension);
   const rows = [...series].map(([label, values]) => {
     const counts = buckets.map(bucket => values.get(bucket.key)?.size || 0);
     return { label, counts, total:counts.reduce((sum, count) => sum + count, 0) };
-  }).filter(row => row.total > 0).sort((a,b) => b.total - a.total || a.label.localeCompare(b.label, "ja"));
+  }).filter(row => row.total > 0).sort((a,b) => ["shelf", "shelfDistrict"].includes(dimension)
+    ? compare(a.label, b.label)
+    : b.total - a.total || a.label.localeCompare(b.label, "ja"));
   return { buckets, rows };
 }
 
-export function monthlyReport(members, movements, month, now = new Date()) {
+export function monthlyReport(members, movements, month, now = new Date(), shelves = []) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("対象月を選択してください。");
   if (month > tokyoMonthKey(now)) throw new Error("未来の月は選択できません。");
   const entries = movements.filter(move => tokyoMonthKey(move.changedAt) === month && String(move.memberId || ""));
@@ -159,12 +184,12 @@ export function monthlyReport(members, movements, month, now = new Date()) {
     activeDays:days.filter(day => day.visitors > 0).length,
     days,
     categories:Object.fromEntries(REPORT_DIMENSIONS.map(dimension => [
-      dimension.key, sortedCounts(visitCountsByCategory(entries, members, dimension.key)).map(([label, count]) => ({ label, count }))
+      dimension.key, sortedCategoryCounts(visitCountsByCategory(entries, members, dimension.key), dimension.key, shelves).map(([label, count]) => ({ label, count }))
     ]))
   };
 }
 
-export function dashboardCsvRows(members, movements, mode, now = new Date(), shelfDistrict = "") {
+export function dashboardCsvRows(members, movements, mode, now = new Date(), shelfDistrict = "", shelves = []) {
   const snapshot = dashboardSnapshot(members, movements, now);
   const rows = [["画面", "集計項目", "区分", "期間", "軒数", "集計方法"]];
   rows.push(["共通", "今月の来館", "全体", snapshot.month, snapshot.monthVisitors, "棚移動履歴・会員番号重複除外"]);
@@ -180,7 +205,7 @@ export function dashboardCsvRows(members, movements, mode, now = new Date(), she
       const counts = dimension.key === "shelf" && shelfDistrict
         ? countValues(members.filter(member => String(member.districtGroup || "未設定") === shelfDistrict), member => member.shelf || "UNKNOWN")
         : snapshot.counts[dimension.key];
-      for (const [label, count] of sortedCounts(counts)) {
+      for (const [label, count] of sortedCategoryCounts(counts, dimension.key, shelves)) {
         rows.push(["現在", title, label, period, count, method]);
       }
     } else {
@@ -188,7 +213,7 @@ export function dashboardCsvRows(members, movements, mode, now = new Date(), she
       const matchingMovements = dimension.key === "shelf" && shelfDistrict
         ? movements.filter(move => String(move.districtGroup || lookup.get(String(move.memberId))?.districtGroup || "未設定") === shelfDistrict)
         : movements;
-      const trend = trendRows(members, matchingMovements, mode, dimension.key, now);
+      const trend = trendRows(members, matchingMovements, mode, dimension.key, now, shelves);
       for (const row of trend.rows) {
         trend.buckets.forEach((bucket, index) => {
           const title = dimension.key === "shelf" && shelfDistrict ? `${dimension.title}（${shelfDistrict}）` : dimension.title;
